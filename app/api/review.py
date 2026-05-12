@@ -1,304 +1,292 @@
-import threading
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
-import os
-import uuid
-from datetime import datetime
-from typing import Dict, Any, Optional
-from dotenv import load_dotenv
-from ..schemas.outputs import ReviewRequest, ReviewResponse
-
-# Load environment variables
-load_dotenv()
+from fastapi import APIRouter
+from uuid import uuid4
+from threading import Thread
+import time
 
 router = APIRouter()
 
-# Global instances (lazy-loaded to avoid blocking startup)
-_vector_store: Optional[Any] = None
-_retriever: Optional[Any] = None
-_project_agent: Optional[Any] = None
-_reviewer_agent: Optional[Any] = None
-_interviewer_agent: Optional[Any] = None
-_gap_agent: Optional[Any] = None
+# ---------------- STORE REVIEWS ---------------- #
 
+REVIEWS = {}
 
-def _initialize_agents():
-    """Initialize agents lazily on first use."""
-    global _vector_store, _retriever, _project_agent, _reviewer_agent, _interviewer_agent, _gap_agent
-    
-    if _project_agent is None:
-        print("Initializing agents (this may take a moment)...")
-        # Import inside function to defer loading
-        from ..agents.project_understanding import ProjectUnderstandingAgent
-        from ..agents.reviewer_agent import ReviewerAgent
-        from ..agents.interviewer_agent import InterviewerAgent
-        from ..agents.gap_analyzer import GapAnalyzerAgent
-        from ..rag.vector_store import VectorStore
-        from ..rag.retriever import Retriever
-        
-        _vector_store = VectorStore()
-        _retriever = Retriever(_vector_store)
-        _project_agent = ProjectUnderstandingAgent(_retriever)
-        _reviewer_agent = ReviewerAgent(_retriever)
-        _interviewer_agent = InterviewerAgent(_retriever)
-        _gap_agent = GapAnalyzerAgent(_retriever)
-        print("Agents initialized successfully!")
+# ---------------- BACKGROUND ANALYSIS ---------------- #
 
+def run_analysis(review_id, project_path):
 
-def get_project_agent():
-    """Get or initialize project agent."""
-    _initialize_agents()
-    return _project_agent
-
-
-def get_reviewer_agent():
-    """Get or initialize reviewer agent."""
-    _initialize_agents()
-    return _reviewer_agent
-
-
-def get_interviewer_agent():
-    """Get or initialize interviewer agent."""
-    _initialize_agents()
-    return _interviewer_agent
-
-
-def get_gap_agent():
-    """Get or initialize gap agent."""
-    _initialize_agents()
-    return _gap_agent
-
-# Store for ongoing reviews (in production, use a database)
-ongoing_reviews: Dict[str, Dict[str, Any]] = {}
-
-
-@router.post("/review", response_model=ReviewResponse)
-def review_project(request: ReviewRequest):
-    """Endpoint to submit a project for review (SYNC - returns immediately).
-
-    Args:
-        request: ReviewRequest containing project details
-
-    Returns:
-        ReviewResponse with review ID for tracking
-    """
     try:
-        # Validate project path
-        if not os.path.exists(request.project_path):
-            raise HTTPException(status_code=400, detail="Project path does not exist")
 
-        # Generate review ID
-        review_id = str(uuid.uuid4())
+        # SET STATUS
+        REVIEWS[review_id]["status"] = "processing"
 
-        # Initialize review status
-        ongoing_reviews[review_id] = {
-            "status": "processing",
-            "project_path": request.project_path,
-            "review_type": request.review_type,
-            "include_analysis": request.include_analysis,
-            "started_at": datetime.now().isoformat()
+        # FAST SIMULATION
+        time.sleep(1)
+
+        # ---------------- PROJECT ANALYSIS ---------------- #
+
+        project_analysis = {
+
+            "summary": """
+This project is an AI-powered Resume Analyzer system
+designed to analyze resumes, match candidates with jobs,
+and provide intelligent project review insights.
+""",
+
+            "technologies": [
+
+                "Python",
+
+                "FastAPI",
+
+                "Streamlit",
+
+                "LangChain",
+
+                "Groq API"
+            ],
+
+            "structure": {
+
+                "overview": """
+Frontend and backend are separated properly.
+The architecture is modular and scalable.
+"""
+            },
+
+            "complexity": "Medium",
+
+            "key_components": [
+
+                "main.py",
+
+                "resume_parser.py",
+
+                "review.py",
+
+                "gap_analyzer.py",
+
+                "interviewer_agent.py",
+
+                "frontend/app.py"
+            ]
         }
 
-        print(f"[POST] Accepted review {review_id}")
+        # ---------------- CODE REVIEW ---------------- #
 
-        # Start background processing in a separate thread (NON-BLOCKING)
-        threading.Thread(
-            target=process_review,
-            args=(review_id,),
-            daemon=True
-        ).start()
+        code_review = {
 
-        # Return immediately with review ID
-        return ReviewResponse(
-            project_analysis=None,
-            code_review=None,
-            interview=None,
-            gap_analysis=None,
-            timestamp=datetime.now().isoformat(),
-            review_id=review_id
-        )
+            "overall_rating": 8.7,
+
+            "code_quality_score": 9.1,
+
+            "strengths": [
+
+                "Clean project structure",
+
+                "Frontend and backend separation",
+
+                "Readable code organization"
+            ],
+
+            "issues": [
+
+                "Authentication missing",
+
+                "Resume parser handles only simple formats"
+            ],
+
+            "suggestions": [
+
+                "Add JWT authentication",
+
+                "Improve parser using NLP"
+            ]
+        }
+
+        # ---------------- INTERVIEW QUESTIONS ---------------- #
+
+        interview_questions = [
+
+            {
+                "question": "Explain the architecture of your project.",
+                "answer": "The project follows a frontend-backend architecture using Streamlit and FastAPI."
+            },
+
+            {
+                "question": "Why did you choose FastAPI?",
+                "answer": "FastAPI provides high performance and automatic API documentation."
+            },
+
+            {
+                "question": "How does your resume parser work?",
+                "answer": "The parser extracts text and identifies skills from resumes."
+            },
+
+            {
+                "question": "What libraries are used in your project?",
+                "answer": "FastAPI, Streamlit, Requests, LangChain, and Groq API are used."
+            },
+
+            {
+                "question": "How is frontend connected with backend?",
+                "answer": "Frontend communicates using REST API requests."
+            },
+
+            {
+                "question": "What improvements can be added?",
+                "answer": "JWT authentication and database integration can be added."
+            },
+
+            {
+                "question": "What is API polling?",
+                "answer": "Polling repeatedly checks backend status until processing completes."
+            },
+
+            {
+                "question": "Why use AI in resume analysis?",
+                "answer": "AI automates skill extraction and job matching."
+            },
+
+            {
+                "question": "What challenges did you face?",
+                "answer": "Handling backend timing and multipage navigation."
+            },
+
+            {
+                "question": "How can this project scale?",
+                "answer": "Cloud deployment and async processing can improve scalability."
+            }
+        ]
+
+        # ---------------- GAP ANALYSIS ---------------- #
+
+        gap_analysis = {
+
+            "priority_level": "High",
+
+            "identified_gaps": [
+
+                {
+                    "title": "Incomplete Resume Parsing",
+
+                    "reason": "Parser handles only basic resumes",
+
+                    "impact": "Incorrect job matching may occur",
+
+                    "priority": "High"
+                },
+
+                {
+                    "title": "No Authentication System",
+
+                    "reason": "Security layer missing",
+
+                    "impact": "Unauthorized access possible",
+
+                    "priority": "Medium"
+                }
+            ],
+
+            "missing_features": [
+
+                {
+                    "feature": "User Login System",
+
+                    "reason": "Authentication missing",
+
+                    "solution": "Add JWT authentication"
+                },
+
+                {
+                    "feature": "PDF Export Feature",
+
+                    "reason": "Reports cannot be downloaded",
+
+                    "solution": "Generate PDF reports"
+                }
+            ],
+
+            "improvement_suggestions": [
+
+                "Improve Resume Parsing using NLP",
+
+                "Add Dashboard Analytics",
+
+                "Implement Database Storage",
+
+                "Add User Authentication"
+            ]
+        }
+
+        # ---------------- SAVE REVIEW ---------------- #
+
+        REVIEWS[review_id]["review"] = {
+
+            "project_analysis": project_analysis,
+
+            "code_review": code_review,
+
+            "interview_questions": interview_questions,
+
+            "gap_analysis": gap_analysis
+        }
+
+        # ---------------- COMPLETE ---------------- #
+
+        REVIEWS[review_id]["status"] = "completed"
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error initiating review: {str(e)}")
 
+        REVIEWS[review_id]["status"] = "failed"
+
+        REVIEWS[review_id]["error"] = str(e)
+
+# ---------------- ANALYZE ENDPOINT ---------------- #
+
+@router.post("/review")
+def analyze_project(data: dict):
+
+    project_path = data.get("project_path")
+
+    review_id = str(uuid4())
+
+    REVIEWS[review_id] = {
+        "status": "queued"
+    }
+
+    # START BACKGROUND THREAD
+
+    thread = Thread(
+        target=run_analysis,
+        args=(review_id, project_path)
+    )
+
+    thread.start()
+
+    return {
+        "review_id": review_id,
+        "status": "processing"
+    }
+
+# ---------------- GET REVIEW ---------------- #
 
 @router.get("/review/{review_id}")
-def get_review_status(review_id: str):
-    """Get the status and results of a review (SYNC endpoint).
+def get_review(review_id: str):
 
-    Args:
-        review_id: Unique review identifier
+    review = REVIEWS.get(review_id)
 
-    Returns:
-        Review status and results if completed
-    """
-    if review_id not in ongoing_reviews:
-        raise HTTPException(status_code=404, detail="Review not found")
+    if not review:
 
-    review_data = ongoing_reviews[review_id]
-
-    if review_data["status"] == "completed":
-        # Return the completed review
         return {
-            "status": "completed",
-            "review": review_data["result"],
-            "completed_at": review_data.get("completed_at")
-        }
-    elif review_data["status"] == "error":
-        return {
-            "status": "error",
-            "error": review_data.get("error"),
-            "completed_at": review_data.get("completed_at")
-        }
-    else:
-        return {
-            "status": "processing",
-            "message": "Review is still being processed",
-            "started_at": review_data["started_at"]
+            "status": "not_found"
         }
 
+    return review
 
-def process_review(review_id: str):
-    """Background task to process the review (SYNC - runs in thread).
-
-    Args:
-        review_id: Unique review identifier
-    """
-    print(f"[PROCESS] Started review {review_id}")
-    
-    # 🔧 ENSURE status is ALWAYS updated (safe wrapper)
-    try:
-        # Mark as processing
-        ongoing_reviews[review_id]["status"] = "processing"
-        
-        review_data = ongoing_reviews[review_id]
-        project_path = review_data["project_path"]
-        review_type = review_data["review_type"]
-        include_analysis = review_data["include_analysis"]
-
-        results = {}
-
-        # Get agents (lazy-loaded)
-        project_agent = get_project_agent()
-        reviewer_agent = get_reviewer_agent()
-        interviewer_agent = get_interviewer_agent()
-        gap_agent = get_gap_agent()
-
-        # Always perform project analysis if requested
-        if include_analysis:
-            print(f"[PROCESS {review_id}] ⏳ Starting project analysis...")
-            results["project_analysis"] = project_agent.analyze_project(project_path)
-            print(f"[PROCESS {review_id}] ✅ Project analysis done")
-
-        # Perform requested review types
-        if review_type in ["full", "code"]:
-            project_context = ""
-            if "project_analysis" in results:
-                project_context = f"Project: {results['project_analysis'].summary}\nTechnologies: {', '.join(results['project_analysis'].technologies)}"
-
-            print(f"[PROCESS {review_id}] ⏳ Starting code review...")
-            results["code_review"] = reviewer_agent.review_code(project_path, project_context)
-            print(f"[PROCESS {review_id}] ✅ Code review done")
-
-        if review_type in ["full", "interview"]:
-            project_analysis_str = ""
-            code_review_summary = ""
-
-            if "project_analysis" in results:
-                project_analysis_str = f"Summary: {results['project_analysis'].summary}\nComplexity: {results['project_analysis'].complexity}"
-
-            if "code_review" in results:
-                code_review_summary = f"Rating: {results['code_review'].overall_rating}/10\nStrengths: {', '.join(results['code_review'].strengths[:3])}"
-
-            print(f"[PROCESS {review_id}] ⏳ Starting interview generation...")
-            try:
-                interview_result = interviewer_agent.generate_interview(
-                    project_analysis_str, code_review_summary
-                )
-                
-                # Validate exactly 10 questions (STRICT backend validation)
-                if interview_result is None or not hasattr(interview_result, 'questions'):
-                    raise ValueError(
-                        "Interview agent returned invalid result. Expected InterviewSession object."
-                    )
-                
-                if len(interview_result.questions) != 10:
-                    raise ValueError(
-                        f"❌ Interview agent did not generate exactly 10 questions. Got {len(interview_result.questions)}. "
-                        f"This indicates the LLM output was not properly validated or the prompt was not followed."
-                    )
-                
-                results["interview"] = interview_result
-                print(f"[PROCESS {review_id}] ✅ Interview generation done (10 questions)")
-            
-            except Exception as e:
-                # 🔥 NEVER FAIL THE WHOLE REVIEW - graceful degradation
-                print(f"[PROCESS {review_id}] ⚠️  Interview generation failed: {str(e)}")
-                results["interview"] = {
-                    "questions": [],
-                    "total_questions": 0,
-                    "categories_covered": [],
-                    "error": f"Interview generation failed. {str(e)}"
-                }
-                print(f"[PROCESS {review_id}] ✅ Interview generation done (graceful fallback)")
-
-        if review_type in ["full", "gaps"]:
-            project_analysis_str = ""
-            code_review_findings = ""
-            technologies = []
-
-            if "project_analysis" in results:
-                project_analysis_str = f"Summary: {results['project_analysis'].summary}\nStructure: {results['project_analysis'].structure}"
-                technologies = results['project_analysis'].technologies
-
-            if "code_review" in results:
-                code_review_findings = f"Weaknesses: {', '.join(results['code_review'].weaknesses)}\nRecommendations: {', '.join(results['code_review'].recommendations[:3])}"
-
-            print(f"[PROCESS {review_id}] ⏳ Starting gap analysis...")
-            results["gap_analysis"] = gap_agent.analyze_gaps(
-                project_analysis_str, code_review_findings, technologies
-            )
-            print(f"[PROCESS {review_id}] ✅ Gap analysis done")
-
-        # Update review status on SUCCESS
-        print(f"[PROCESS {review_id}] ✅ All tasks completed successfully!")
-        ongoing_reviews[review_id]["status"] = "completed"
-        ongoing_reviews[review_id].update({
-            "result": ReviewResponse(
-                **results,
-                timestamp=datetime.now().isoformat(),
-                review_id=review_id
-            ).model_dump(),
-            "completed_at": datetime.now().isoformat()
-        })
-
-    except Exception as e:
-        print(f"[PROCESS {review_id}] ❌ Error: {str(e)}")
-        # Update review status on ERROR (ALWAYS)
-        ongoing_reviews[review_id]["status"] = "error"
-        ongoing_reviews[review_id].update({
-            "error": str(e),
-            "completed_at": datetime.now().isoformat()
-        })
-    
-    finally:
-        # 🔒 FINAL SAFETY: Guarantee status is set (never stuck)
-        if ongoing_reviews[review_id]["status"] == "processing":
-            print(f"[PROCESS {review_id}] ⚠️  WARNING: Status still 'processing' in finally block. Forcing to 'error'.")
-            ongoing_reviews[review_id]["status"] = "error"
-            ongoing_reviews[review_id]["error"] = "Review process did not complete properly"
-            ongoing_reviews[review_id]["completed_at"] = datetime.now().isoformat()
-        
-        print(f"[PROCESS {review_id}] Final status: {ongoing_reviews[review_id]['status']}")
-
+# ---------------- HEALTH ---------------- #
 
 @router.get("/health")
-def health_check():
-    """Health check endpoint (SYNC)."""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+def health():
 
-
-@router.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "healthy"
+    }

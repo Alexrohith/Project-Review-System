@@ -147,7 +147,9 @@ AI-Project-Reviewer/
 
    **Option A: Backend API**
    ```bash
-   python app/main.py
+   python -m uvicorn app.main:app --reload --port 8000
+   # or, from the project root once the wrapper exists:
+   uvicorn main:app --reload --port 8000
    ```
    API will be available at `http://localhost:8000`
    - API Documentation: `http://localhost:8000/docs`
@@ -155,7 +157,7 @@ AI-Project-Reviewer/
 
    **Option B: Frontend Interface**
    ```bash
-   streamlit run frontend/app.py
+   python run_frontend.py
    ```
    Frontend will open at `http://localhost:8501`
 

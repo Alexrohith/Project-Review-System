@@ -10,7 +10,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api.review import router as review_router
+from app.api.review import router as review_router
 
 # Load environment variables
 load_dotenv()
@@ -54,7 +54,7 @@ def main():
     port = int(os.getenv("PORT", 8000))
 
     print(f"Starting AI Project Reviewer on port {port}")
-    print("API Documentation available at: http://localhost:{port}/docs")
+    print(f"API Documentation available at: http://localhost:{port}/docs")
 
     # Run the application
     uvicorn.run(
