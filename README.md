@@ -143,7 +143,7 @@ AI-Project-Reviewer/
    GROQ_API_KEY=your_groq_api_key_here
    ```
 
-5. **Run the application**
+5. **Run the application in the system**
 
    **Option A: Backend API**
    ```bash
